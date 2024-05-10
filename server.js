@@ -1,15 +1,15 @@
-//server.js
+// server.js
 import fs from "fs";
 import uWS from "uWebSockets.js";
 
 const app = uWS.App();
 
 const PORT = 4000;
-const activeSockets = [];
+const activeSockets = new Set(); // set to store WebSocket instances
 
 // Default route for http
 app.get("/*", (res, req) => {
-  const fileBuffer = fs.readFileSync("./index.html"); // Changed to relative path
+  const fileBuffer = fs.readFileSync("./app/routes/_index.tsx");
   res.writeHeader("Content-Type", "text/html");
   res.end(fileBuffer);
 });
@@ -24,18 +24,17 @@ app
     /* Handlers */
     open: (ws) => {
       console.log("A user connected.");
-      activeSockets.push(ws);
+      activeSockets.add(ws); // Add the WebSocket instance to the set
     },
     message: (ws, message, isBinary) => {
-      let receivedMessage = Buffer.from(message).toString();
-      console.log("Received message:", receivedMessage);
+      console.log("Received message:", message);
 
       // Broadcast the message to all connected clients
-      for (let client of activeSockets) {
-        //if (client !== ws) { // Optional: exclude the sender
-        console.log(`Sending message ${message} to client: `, client);
-        client.send(message, isBinary);
-        //}
+      for (const client of activeSockets) {
+        if (client !== ws) {
+          // Exclude the sender
+          client.send(message, isBinary);
+        }
       }
     },
     drain: (ws) => {
@@ -43,10 +42,7 @@ app
     },
     close: (ws, code, message) => {
       console.log("WebSocket closed");
-      const index = activeSockets.indexOf(ws);
-      if (index > -1) {
-        activeSockets.splice(index, 1);
-      }
+      activeSockets.delete(ws); // Remove the WebSocket instance from the set
     },
   })
   .listen(PORT, (token) => {
@@ -60,6 +56,7 @@ app
     }
   });
 
+// //server.js
 // import fs from "fs";
 // import uWS from "uWebSockets.js";
 
@@ -70,7 +67,7 @@ app
 
 // // Default route for http
 // app.get("/*", (res, req) => {
-//   const fileBuffer = fs.readFileSync(__dirname + "/index.html");
+//   const fileBuffer = fs.readFileSync("./app/routes/_index.tsx"); // Changed to relative path
 //   res.writeHeader("Content-Type", "text/html");
 //   res.end(fileBuffer);
 // });
